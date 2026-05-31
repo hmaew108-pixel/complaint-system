@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ระบบจัดการคำร้อง – เทศบาลนครขอนแก่น</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #1a4f8a;
+    --primary-light: #2563a8;
+    --primary-dark: #0f3060;
+    --accent: #f59e0b;
+    --accent-light: #fcd34d;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --yellow: #d97706;
+    --yellow-bg: #fffbeb;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    --sidebar-w: 240px;
+    --header-h: 60px;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.05);
+    --font: 'IBM Plex Sans Thai', 'Sarabun', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--gray-50); color: var(--gray-800); font-size: 14px; line-height: 1.6; }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; min-height: 100vh; }
+  
+  /* SIDEBAR */
+  .sidebar {
+    width: var(--sidebar-w); background: var(--primary-dark);
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; height: 100vh;
+    z-index: 100; transition: transform .3s;
+  }
+  .sidebar-header {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+    background: var(--primary);
+  }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; }
+  .sidebar-logo-icon {
+    width: 36px; height: 36px; background: var(--accent);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .sidebar-logo-text h2 { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .sidebar-logo-text p { font-size: 11px; color: rgba(255,255,255,.6); }
+
+  .sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+  .nav-section-label {
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,.4);
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: 12px 8px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px; cursor: pointer;
+    color: rgba(255,255,255,.7); font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s; border: none; width: 100%; background: none;
+    text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .nav-item.active { background: var(--accent); color: var(--gray-900); }
+  .nav-item.active .nav-icon { color: var(--gray-900); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; background: var(--red);
+    color: #fff; font-size: 11px; font-weight: 700;
+    border-radius: 20px; padding: 1px 7px; min-width: 20px; text-align: center;
+  }
+  .nav-item.active .nav-badge { background: var(--red); color: #fff; }
+
+  .sidebar-footer {
+    padding: 12px 8px; border-top: 1px solid rgba(255,255,255,.1);
+  }
+  .user-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: rgba(255,255,255,.06);
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 13px; color: var(--gray-900);
+    flex-shrink: 0;
+  }
+  .user-info { overflow: hidden; }
+  .user-info strong { display: block; font-size: 12.5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-info span { font-size: 11px; color: rgba(255,255,255,.5); }
+  .logout-btn { margin-left: auto; background: none; border: none; cursor: pointer; color: rgba(255,255,255,.4); font-size: 16px; padding: 2px; }
+  .logout-btn:hover { color: rgba(255,255,255,.8); }
+
+  /* MAIN */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  
+  /* TOP BAR */
+  .topbar {
+    height: var(--header-h); background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 24px; position: sticky; top: 0; z-index: 50;
+    box-shadow: var(--shadow);
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+  .topbar-breadcrumb { font-size: 12px; color: var(--gray-400); }
+  .topbar-spacer { flex: 1; }
+
+  /* search bar */
+  .search-wrap { position: relative; }
+  .search-input {
+    height: 36px; padding: 0 12px 0 36px; border-radius: 8px;
+    border: 1.5px solid var(--gray-200); background: var(--gray-50);
+    font-family: var(--font); font-size: 13px; color: var(--gray-700);
+    outline: none; width: 260px; transition: border-color .2s, width .3s;
+  }
+  .search-input:focus { border-color: var(--primary-light); background: #fff; width: 320px; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--gray-400); font-size: 14px; pointer-events: none; }
+
+  .topbar-icon-btn {
+    width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid var(--gray-200);
+    background: #fff; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; color: var(--gray-600);
+    transition: background .15s; position: relative;
+  }
+  .topbar-icon-btn:hover { background: var(--gray-50); }
+  .notif-dot {
+    position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+    background: var(--red); border-radius: 50%; border: 2px solid #fff;
+  }
+
+  /* PAGE */
+  .page { padding: 24px; display: none; }
+  .page.active { display: block; }
+
+  /* SECTION TITLE */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .section-title { font-size: 18px; font-weight: 700; color: var(--gray-800); }
+  .section-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: #fff; border-radius: var(--radius); padding: 18px 20px;
+    box-shadow: var(--shadow); border: 1px solid var(--gray-200);
+    display: flex; align-items: flex-start; gap: 14px;
+    transition: box-shadow .2s, transform .2s; cursor: default;
+  }
+  .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .kpi-icon {
+    width: 46px; height: 46px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .kpi-icon.total { background: #e0e7ff; }
+  .kpi-icon.urgent { background: var(--red-bg); }
+  .kpi-icon.progress { background: var(--yellow-bg); }
+  .kpi-icon.done { background: var(--green-bg); }
+  .kpi-body { flex: 1; min-width: 0; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: var(--gray-900); line-height: 1; }
+  .kpi-label { font-size: 12.5px; color: var(--gray-500); margin-top: 4px; }
+  .kpi-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+  /* CHARTS */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card {
+    background: #fff; border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow); border: 1px solid var(--gray-200);
+  }
+  .chart-title { font-size: 14px; font-weight: 600; color: var(--gray-700); margin-bottom: 16px; }
+  .chart-wrap { height: 220px; position: relative; }
+
+  /* ALERT OVERDUE */
+  .alert-box {
+    background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius);
+    padding: 12px 16px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px; color: #856404;
+    font-size: 13px; font-weight: 500;
+  }
+  .alert-box.red { background: var(--red-bg); border-color: #fca5a5; color: #991b1b; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: var(--shadow);
+  }
+  .filter-bar label { font-size: 12px; font-weight: 600; color: var(--gray-600); white-space: nowrap; }
+  .filter-select {
+    height: 34px; padding: 0 10px; border-radius: 7px;
+    border: 1.5px solid var(--gray-200); background: var(--gray-50);
+    font-family: var(--font); font-size: 13px; color: var(--gray-700);
+    outline: none; cursor: pointer; transition: border-color .2s;
+  }
+  .filter-select:focus { border-color: var(--primary-light); background: #fff; }
+  .filter-spacer { flex: 1; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 14px; border-radius: 7px; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 600; transition: all .15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-outline { background: #fff; color: var(--gray-700); border: 1.5px solid var(--gray-200); }
+  .btn-outline:hover { background: var(--gray-50); border-color: var(--gray-300); }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+
+  /* TABLE */
+  .table-wrap {
+    background: #fff; border-radius: var(--radius);
+    border: 1px solid var(--gray-200); box-shadow: var(--shadow); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--gray-50); border-bottom: 2px solid var(--gray-200); }
+  th {
+    padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 700;
+    color: var(--gray-600); text-transform: uppercase; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  td { padding: 11px 14px; font-size: 13px; color: var(--gray-700); border-bottom: 1px solid var(--gray-100); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .1s; }
+  tbody tr:hover { background: var(--gray-50); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+  }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+  .badge-orange { background: #fff7ed; color: #c2410c; }
+  .badge-purple { background: #f5f3ff; color: #7c3aed; }
+
+  /* STATUS badge */
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .status-wait     { background: #fef9c3; color: #854d0e; }
+  .status-doing    { background: var(--blue-bg); color: var(--blue); }
+  .status-tracking { background: var(--yellow-bg); color: var(--yellow); }
+  .status-overdue  { background: var(--red-bg); color: var(--red); }
+  .status-forward  { background: #f5f3ff; color: #7c3aed; }
+  .status-plan     { background: #ecfdf5; color: #065f46; }
+  .status-done     { background: var(--green-bg); color: var(--green); }
+
+  /* PAGINATION */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-top: 1px solid var(--gray-200); background: #fff;
+    font-size: 13px; color: var(--gray-500);
+  }
+  .page-btns { display: flex; align-items: center; gap: 6px; }
+  .page-btn {
+    width: 32px; height: 32px; border-radius: 7px; border: 1.5px solid var(--gray-200);
+    background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--gray-600); transition: all .15s;
+  }
+  .page-btn:hover:not(:disabled) { background: var(--gray-50); border-color: var(--gray-300); }
+  .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* FORM */
+  .form-card {
+    background: #fff; border-radius: var(--radius); padding: 28px;
+    border: 1px solid var(--gray-200); box-shadow: var(--shadow); max-width: 760px;
+  }
+  .form-section-title {
+    font-size: 13px; font-weight: 700; color: var(--gray-600);
+    text-transform: uppercase; letter-spacing: .05em;
+    padding-bottom: 10px; border-bottom: 1.5px solid var(--gray-200); margin-bottom: 20px; margin-top: 24px;
+  }
+  .form-section-title:first-child { margin-top: 0; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+  .form-group label .req { color: var(--red); margin-left: 2px; }
+  .form-input, .form-select, .form-textarea {
+    height: 38px; padding: 0 12px; border-radius: 8px;
+    border: 1.5px solid var(--gray-200); background: #fff;
+    font-family: var(--font); font-size: 13.5px; color: var(--gray-800);
+    outline: none; transition: border-color .2s, box-shadow .2s; width: 100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(37,99,168,.1);
+  }
+  .form-textarea { height: 80px; padding: 10px 12px; resize: vertical; }
+  .form-hint { font-size: 11.5px; color: var(--gray-400); }
+  .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--gray-200); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; opacity: 0; visibility: hidden; transition: all .2s;
+  }
+  .modal-overlay.open { opacity: 1; visibility: visible; }
+  .modal {
+    background: #fff; border-radius: 14px; max-width: 560px; width: 92%;
+    max-height: 90vh; overflow-y: auto; padding: 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    transform: scale(.95) translateY(10px); transition: transform .25s;
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .modal-close { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 20px; color: var(--gray-400); }
+  .modal-close:hover { color: var(--gray-700); }
+
+  /* DETAIL ROW */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .detail-item label { font-size: 11.5px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 3px; }
+  .detail-item span { font-size: 14px; color: var(--gray-800); font-weight: 500; }
+
+  /* AUDIT LOG */
+  .audit-log { margin-top: 20px; }
+  .audit-entry { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+  .audit-entry:last-child { border-bottom: none; }
+  .audit-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; flex-shrink: 0; }
+  .audit-text { font-size: 13px; color: var(--gray-700); }
+  .audit-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+  /* NOTIFICATION PANEL */
+  .notif-panel {
+    position: fixed; top: var(--header-h); right: 0;
+    width: 360px; background: #fff; border-left: 1px solid var(--gray-200);
+    height: calc(100vh - var(--header-h)); box-shadow: var(--shadow-lg);
+    z-index: 150; transform: translateX(100%); transition: transform .25s;
+    display: flex; flex-direction: column;
+  }
+  .notif-panel.open { transform: translateX(0); }
+  .notif-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 8px; }
+  .notif-header h3 { font-size: 15px; font-weight: 700; flex: 1; }
+  .notif-list { flex: 1; overflow-y: auto; }
+  .notif-item { padding: 14px 20px; border-bottom: 1px solid var(--gray-100); display: flex; gap: 12px; cursor: pointer; transition: background .1s; }
+  .notif-item:hover { background: var(--gray-50); }
+  .notif-item.unread { background: #eff6ff; }
+  .notif-item-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .notif-item-body { flex: 1; }
+  .notif-item-title { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+  .notif-item-desc { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .notif-item-time { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+
+  /* LOGIN */
+  .login-page {
+    position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, #1d6fa8 100%);
+    display: flex; align-items: center; justify-content: center; z-index: 500;
+    transition: opacity .4s; 
+  }
+  .login-page.hidden { opacity: 0; pointer-events: none; }
+  .login-card {
+    background: #fff; border-radius: 16px; padding: 40px; width: 380px;
+    box-shadow: 0 24px 48px rgba(0,0,0,.3);
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo-icon { width: 60px; height: 60px; background: var(--primary); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 12px; }
+  .login-logo h2 { font-size: 17px; font-weight: 700; color: var(--gray-800); }
+  .login-logo p { font-size: 13px; color: var(--gray-500); }
+  .login-form { display: flex; flex-direction: column; gap: 14px; }
+  .login-form label { font-size: 13px; font-weight: 600; color: var(--gray-700); display: block; margin-bottom: 5px; }
+  .login-form input {
+    width: 100%; height: 42px; padding: 0 14px; border-radius: 9px;
+    border: 1.5px solid var(--gray-200); font-family: var(--font); font-size: 14px;
+    outline: none; transition: border-color .2s;
+  }
+  .login-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,79,138,.12); }
+  .role-select-group { display: flex; gap: 8px; margin-top: 2px; }
+  .role-btn { flex: 1; padding: 8px; border: 1.5px solid var(--gray-200); border-radius: 8px; cursor: pointer; background: #fff; font-family: var(--font); font-size: 12.5px; font-weight: 500; color: var(--gray-600); transition: all .15s; text-align: center; }
+  .role-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); font-weight: 700; }
+  .login-btn {
+    height: 44px; background: var(--primary); color: #fff; border: none; border-radius: 10px;
+    font-family: var(--font); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: 4px;
+  }
+  .login-btn:hover { background: var(--primary-light); }
+  .login-hint { font-size: 12px; color: var(--gray-400); text-align: center; margin-top: 4px; }
+
+  /* TOAST */
+  #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    background: var(--gray-800); color: #fff; padding: 12px 18px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 500; display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow-lg); animation: slideUp .3s ease; min-width: 240px;
+  }
+  .toast.success { background: #166534; }
+  .toast.error { background: #991b1b; }
+  .toast.warning { background: #92400e; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* STATS MINI */
+  .mini-stat { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-600); }
+  .mini-stat strong { color: var(--gray-800); font-weight: 700; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-row.triple { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .filter-select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div class="login-page" id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">📋</div>
+      <h2>ระบบจัดการคำร้อง</h2>
+      <p>เทศบาลนครขอนแก่น</p>
+    </div>
+    <div class="login-form">
+      <div>
+        <label>ชื่อผู้ใช้</label>
+        <input type="text" id="loginUser" value="admin" placeholder="กรอกชื่อผู้ใช้" />
+      </div>
+      <div>
+        <label>รหัสผ่าน</label>
+        <input type="password" id="loginPass" value="1234" placeholder="กรอกรหัสผ่าน" />
+      </div>
+      <div>
+        <label>เข้าสู่ระบบในฐานะ</label>
+        <div class="role-select-group">
+          <button class="role-btn active" onclick="selectRole(this,'admin')">👑 ผู้ดูแลระบบ</button>
+          <button class="role-btn" onclick="selectRole(this,'officer')">👤 เจ้าหน้าที่</button>
+          <button class="role-btn" onclick="selectRole(this,'manager')">📊 ผู้บริหาร</button>
+        </div>
+      </div>
+      <button class="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <p class="login-hint">ทดลองใช้: admin / 1234</p>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION PANEL -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-header">
+    <h3>🔔 การแจ้งเตือน</h3>
+    <button class="modal-close" onclick="toggleNotif()">✕</button>
+  </div>
+  <div class="notif-list" id="notifList"></div>
+</div>
+
+<!-- MODAL: DETAIL -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event,'detailModal')">
+  <div class="modal">
+    <div class="modal-title">
+      📄 รายละเอียดคำร้อง
+      <button class="modal-close" onclick="closeModalById('detailModal')">✕</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="layout" id="mainLayout" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">📋</div>
+        <div class="sidebar-logo-text">
+          <h2>ระบบจัดการคำร้อง</h2>
+          <p id="sidebarRole">ผู้ดูแลระบบ</p>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">เมนูหลัก</div>
+      <button class="nav-item active" onclick="navigate('dashboard',this)">
+        <span class="nav-icon">📊</span> ภาพรวม
+      </button>
+      <button class="nav-item" onclick="navigate('complaints',this)" id="navComplaints">
+        <span class="nav-icon">📋</span> คำร้องทั้งหมด
+        <span class="nav-badge" id="urgentBadge">0</span>
+      </button>
+      <button class="nav-item" onclick="navigate('add',this)">
+        <span class="nav-icon">➕</span> เพิ่มคำร้อง
+      </button>
+      <div class="nav-section-label">รายงาน</div>
+      <button class="nav-item" onclick="navigate('report',this)">
+        <span class="nav-icon">📈</span> สถิติ & รายงาน
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-info">
+          <strong id="userName">ผู้ดูแลระบบ</strong>
+          <span id="userRole">Administrator</span>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="ออกจากระบบ">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--gray-500);display:none" id="menuBtn">☰</button>
+      <div>
+        <div class="topbar-title" id="topbarTitle">ภาพรวม</div>
+        <div class="topbar-breadcrumb" id="topbarBreadcrumb">หน้าแรก › ภาพรวม</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" placeholder="ค้นหาเลขคำร้อง, ชุมชน..." id="globalSearch" oninput="handleGlobalSearch(this.value)" />
+      </div>
+      <button class="topbar-icon-btn" onclick="toggleNotif()" title="การแจ้งเตือน">
+        🔔
+        <span class="notif-dot" id="notifDot"></span>
+      </button>
+    </header>
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="section-header">
+        <div>
+          <div class="section-title">ภาพรวมระบบ</div>
+          <div class="section-sub" id="dashDateSub"></div>
+        </div>
+        <button class="btn btn-outline" onclick="exportAllCSV()">⬇ Export รายงาน CSV</button>
+      </div>
+
+      <div id="overdueAlert" class="alert-box red" style="display:none">
+        ⚠️ มีคำร้องที่เกินกำหนดเวลา <strong id="overdueCount">0</strong> รายการ กรุณาตรวจสอบด่วน!
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" onclick="navigate('complaints',document.querySelector('[onclick*=complaints]'))">
+          <div class="kpi-icon total">📋</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpiTotal">0</div>
+            <div class="kpi-label">คำร้องทั้งหมด</div>
+            <div class="kpi-sub">รายการในระบบ</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon urgent">🔴</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpiUrgent">0</div>
+            <div class="kpi-label">ต้องดำเนินการด่วน</div>
+            <div class="kpi-sub">รอช่างรับเรื่อง</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon progress">🟡</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpiProgress">0</div>
+            <div class="kpi-label">อยู่ระหว่างดำเนินการ</div>
+            <div class="kpi-sub">กำลังติดตาม / เกินกำหนด</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon done">✅</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpiDone">0</div>
+            <div class="kpi-label">เสร็จสิ้น</div>
+            <div class="kpi-sub">ประเมินผลเสร็จสิ้น</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 ปริมาณคำร้องแยกตามประเภท (Top 10)</div>
+          <div class="chart-wrap"><canvas id="chartType"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🏢 ปริมาณคำร้องแยกตามส่วนงาน</div>
+          <div class="chart-wrap"><canvas id="chartDept"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLAINTS PAGE -->
+    <div class="page" id="page-complaints">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🚨 คำร้องทั้งหมด</div>
+          <div class="section-sub">เรียงตามลำดับความสำคัญ</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="exportFilteredCSV()">⬇ Export CSV</button>
+          <button class="btn btn-primary" onclick="navigate('add',document.querySelector('[onclick*=add]'))">➕ เพิ่มคำร้อง</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <label>กรอง:</label>
+        <select class="filter-select" id="fDept" onchange="applyFilter()">
+          <option value="">ทุกส่วนงาน</option>
+          <option>ส่วนการโยธา</option>
+          <option>ส่วนช่างสุขาภิบาล</option>
+          <option>ส่วนควบคุมการก่อสร้างอาคารและผังเมือง</option>
+        </select>
+        <select class="filter-select" id="fCat" onchange="applyFilter()">
+          <option value="">ทุกหมวด</option>
+        </select>
+        <select class="filter-select" id="fPriority" onchange="applyFilter()">
+          <option value="">ทุกลำดับ</option>
+          <option value="เร่งด่วน">🔴 เร่งด่วน</option>
+          <option value="สูง">🟡 สูง</option>
+          <option value="ปานกลาง">🔵 ปานกลาง</option>
+          <option value="เสร็จสิ้น">🟢 เสร็จสิ้น</option>
+        </select>
+        <select class="filter-select" id="fStatus" onchange="applyFilter()">
+          <option value="">ทุกสถานะ</option>
+          <option>รอช่างรับเรื่อง</option>
+          <option>กำลังดำเนินการ</option>
+          <option>อยู่ระหว่างการติดตาม</option>
+          <option>เกินกำหนด</option>
+          <option>ส่งต่อหน่วยงานอื่น</option>
+          <option>เข้าแผนปีงบประมาณ</option>
+          <option>ประเมินผลเสร็จสิ้น</option>
+        </select>
+        <select class="filter-select" id="fZone" onchange="applyFilter()">
+          <option value="">ทุกเขต</option>
+          <option>เขต 1</option><option>เขต 2</option><option>เขต 3</option><option>เขต 4</option>
+        </select>
+        <div class="filter-spacer"></div>
+        <div class="mini-stat">แสดง <strong id="filteredCount">0</strong> / <strong id="totalCount">0</strong> รายการ</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>เลขคำร้อง</th>
+              <th>หมวด</th>
+              <th>ประเภทงาน</th>
+              <th>ส่วนงาน</th>
+              <th>เขต/ชุมชน</th>
+              <th>ลำดับ</th>
+              <th>สถานะ</th>
+              <th>วันรับ</th>
+              <th>วันเสร็จ</th>
+              <th>ระยะเวลา</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="complaintTableBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display:none">
+          <div class="empty-icon">🔍</div>
+          <p>ไม่พบข้อมูลที่ค้นหา</p>
+        </div>
+        <div class="pagination">
+          <span id="pageInfo">แสดง 0–0 จาก 0 รายการ</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD PAGE -->
+    <div class="page" id="page-add">
+      <div class="section-header">
+        <div>
+          <div class="section-title">➕ เพิ่มคำร้องใหม่</div>
+          <div class="section-sub">กรอกข้อมูลคำร้องที่ต้องการเพิ่มเข้าระบบ</div>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-section-title">ข้อมูลพื้นฐาน</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>เลขคำร้อง <span class="req">*</span></label>
+            <input class="form-input" type="text" id="fId" placeholder="เช่น CR-2568-001" />
+            <span class="form-hint">หากปล่อยว่าง ระบบจะสร้างเลขอัตโนมัติ</span>
+          </div>
+          <div class="form-group">
+            <label>วันที่รับเรื่อง</label>
+            <input class="form-input" type="date" id="fDate" />
+          </div>
+        </div>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label>ส่วนงาน <span class="req">*</span></label>
+            <select class="form-select" id="fDeptForm" onchange="updateFaction()">
+              <option value="">-- เลือกส่วนงาน --</option>
+              <option>ส่วนการโยธา</option>
+              <option>ส่วนช่างสุขาภิบาล</option>
+              <option>ส่วนควบคุมการก่อสร้างอาคารและผังเมือง</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ฝ่าย</label>
+            <select class="form-select" id="fFaction">
+              <option value="">-- เลือกฝ่าย --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ลำดับความสำคัญ</label>
+            <select class="form-select" id="fPriorityForm">
+              <option>ปานกลาง</option>
+              <option>สูง</option>
+              <option>เร่งด่วน</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-section-title">รายละเอียดคำร้อง</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>หมวด (เรื่องร้องทุกข์) <span class="req">*</span></label>
+            <select class="form-select" id="fCatForm">
+              <option value="">-- เลือกหมวด --</option>
+              <option>ถนน / ทางเท้า</option>
+              <option>ไฟฟ้าสาธารณะ</option>
+              <option>ท่อระบายน้ำ / น้ำขัง</option>
+              <option>ขยะ / ความสะอาด</option>
+              <option>ต้นไม้ / สวนสาธารณะ</option>
+              <option>อาคาร / สิ่งปลูกสร้าง</option>
+              <option>เสียงรบกวน</option>
+              <option>น้ำประปา</option>
+              <option>อื่น ๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ประเภทคำร้อง</label>
+            <select class="form-select" id="fTypeForm">
+              <option value="">-- เลือกประเภท --</option>
+              <option>ซ่อมแซม</option>
+              <option>ก่อสร้างใหม่</option>
+              <option>ตรวจสอบ</option>
+              <option>ร้องเรียน</option>
+              <option>ข้อเสนอแนะ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label>เขต</label>
+            <select class="form-select" id="fZoneForm">
+              <option value="">ไม่ระบุ</option>
+              <option>เขต 1</option><option>เขต 2</option><option>เขต 3</option><option>เขต 4</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ชุมชน</label>
+            <input class="form-input" type="text" id="fCommunity" placeholder="ชื่อชุมชน / หมู่บ้าน" />
+          </div>
+          <div class="form-group">
+            <label>สถานะ</label>
+            <select class="form-select" id="fStatusForm">
+              <option>รอช่างรับเรื่อง</option>
+              <option>กำลังดำเนินการ</option>
+              <option>อยู่ระหว่างการติดตาม</option>
+              <option>เกินกำหนด</option>
+              <option>ส่งต่อหน่วยงานอื่น</option>
+              <option>เข้าแผนปีงบประมาณ</option>
+              <option>ประเมินผลเสร็จสิ้น</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>หมายเหตุ / รายละเอียดเพิ่มเติม</label>
+            <textarea class="form-textarea" id="fNote" placeholder="ระบุรายละเอียดเพิ่มเติม..."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveComplaint()">✓ บันทึกคำร้อง</button>
+          <button class="btn btn-outline" onclick="clearForm()">✕ ล้างข้อมูล</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT PAGE -->
+    <div class="page" id="page-report">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📈 สถิติ & รายงาน</div>
+          <div class="section-sub">สรุปข้อมูลคำร้องประจำปีงบประมาณ</div>
+        </div>
+        <button class="btn btn-outline" onclick="exportAllCSV()">⬇ Export CSV</button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon total">📋</div><div class="kpi-body"><div class="kpi-value" id="rTotal">0</div><div class="kpi-label">คำร้องทั้งหมด</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon urgent">🔴</div><div class="kpi-body"><div class="kpi-value" id="rOverdue">0</div><div class="kpi-label">เกินกำหนด</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon done">✅</div><div class="kpi-body"><div class="kpi-value" id="rDone">0</div><div class="kpi-label">เสร็จสิ้น</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon progress">📊</div><div class="kpi-body"><div class="kpi-value" id="rRate">0%</div><div class="kpi-label">อัตราเสร็จสิ้น</div></div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 คำร้องแยกตามสถานะ</div>
+          <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📅 คำร้องรายเดือน</div>
+          <div class="chart-wrap"><canvas id="chartMonth"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ──────────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────────
+const FACTIONS = {
+  'ส่วนการโยธา': ['ฝ่ายก่อสร้าง', 'ฝ่ายซ่อมบำรุง', 'ฝ่ายสะพานและทางหลวง'],
+  'ส่วนช่างสุขาภิบาล': ['ฝ่ายสุขาภิบาล', 'ฝ่ายระบายน้ำ', 'ฝ่ายขยะและสิ่งแวดล้อม'],
+  'ส่วนควบคุมการก่อสร้างอาคารและผังเมือง': ['ฝ่ายผังเมือง', 'ฝ่ายควบคุมอาคาร', 'ฝ่ายตรวจสอบ'],
+};
+
+const STATUS_CLASS = {
+  'รอช่างรับเรื่อง': 'status-wait',
+  'กำลังดำเนินการ': 'status-doing',
+  'อยู่ระหว่างการติดตาม': 'status-tracking',
+  'เกินกำหนด': 'status-overdue',
+  'ส่งต่อหน่วยงานอื่น': 'status-forward',
+  'เข้าแผนปีงบประมาณ': 'status-plan',
+  'ประเมินผลเสร็จสิ้น': 'status-done',
+};
+
+const PRIORITY_CLASS = { 'เร่งด่วน': 'badge-red', 'สูง': 'badge-yellow', 'ปานกลาง': 'badge-blue', 'เสร็จสิ้น': 'badge-green' };
+const PRIORITY_ICON = { 'เร่งด่วน': '🔴', 'สูง': '🟡', 'ปานกลาง': '🔵', 'เสร็จสิ้น': '🟢' };
+
+// sample data
+let complaints = [
+  { id:'CR-2568-001', cat:'ถนน / ทางเท้า', type:'ซ่อมแซม', dept:'ส่วนการโยธา', faction:'ฝ่ายซ่อมบำรุง', zone:'เขต 1', community:'บ้านทุ่ง', priority:'เร่งด่วน', status:'รอช่างรับเรื่อง', dateIn:'2568-04-01', dateDone:'', note:'ถนนพังรุนแรงหลังฝนตก', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-01 08:30'}] },
+  { id:'CR-2568-002', cat:'ไฟฟ้าสาธารณะ', type:'ซ่อมแซม', dept:'ส่วนการโยธา', faction:'ฝ่ายก่อสร้าง', zone:'เขต 2', community:'ชุมชนโนนทัน', priority:'สูง', status:'กำลังดำเนินการ', dateIn:'2568-04-03', dateDone:'', note:'ไฟดับทั้งซอย', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-03 09:00'},{user:'officer1',action:'รับเรื่อง',time:'2568-04-04 10:00'}] },
+  { id:'CR-2568-003', cat:'ท่อระบายน้ำ / น้ำขัง', type:'ตรวจสอบ', dept:'ส่วนช่างสุขาภิบาล', faction:'ฝ่ายระบายน้ำ', zone:'เขต 3', community:'บ้านหนองแวง', priority:'เร่งด่วน', status:'เกินกำหนด', dateIn:'2568-03-15', dateDone:'', note:'น้ำขังหน้าบ้านทุกครั้งที่ฝนตก', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-03-15 11:00'},{user:'officer2',action:'รับเรื่อง',time:'2568-03-16 09:00'},{user:'system',action:'ระบบแจ้งเตือน: เกินกำหนด',time:'2568-04-01 00:00'}] },
+  { id:'CR-2568-004', cat:'ขยะ / ความสะอาด', type:'ร้องเรียน', dept:'ส่วนช่างสุขาภิบาล', faction:'ฝ่ายขยะและสิ่งแวดล้อม', zone:'เขต 1', community:'ชุมชนโนนชัย', priority:'ปานกลาง', status:'ประเมินผลเสร็จสิ้น', dateIn:'2568-03-20', dateDone:'2568-04-05', note:'ขยะไม่มีคนเก็บนานกว่า 1 สัปดาห์', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-03-20 14:00'},{user:'officer1',action:'ดำเนินการเสร็จสิ้น',time:'2568-04-05 16:00'}] },
+  { id:'CR-2568-005', cat:'ต้นไม้ / สวนสาธารณะ', type:'ซ่อมแซม', dept:'ส่วนการโยธา', faction:'ฝ่ายซ่อมบำรุง', zone:'เขต 4', community:'บ้านสาวะถี', priority:'สูง', status:'อยู่ระหว่างการติดตาม', dateIn:'2568-04-08', dateDone:'', note:'ต้นไม้ล้มขวางทางเท้า', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-08 07:45'}] },
+  { id:'CR-2568-006', cat:'อาคาร / สิ่งปลูกสร้าง', type:'ตรวจสอบ', dept:'ส่วนควบคุมการก่อสร้างอาคารและผังเมือง', faction:'ฝ่ายควบคุมอาคาร', zone:'เขต 2', community:'ชุมชนพระลับ', priority:'ปานกลาง', status:'ส่งต่อหน่วยงานอื่น', dateIn:'2568-04-10', dateDone:'', note:'อาคารเก่าผุพังเสี่ยงอันตราย', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-10 10:30'},{user:'manager',action:'ส่งต่อกรมโยธาธิการ',time:'2568-04-11 13:00'}] },
+  { id:'CR-2568-007', cat:'น้ำประปา', type:'ซ่อมแซม', dept:'ส่วนช่างสุขาภิบาล', faction:'ฝ่ายสุขาภิบาล', zone:'เขต 3', community:'บ้านดอนช้าง', priority:'เร่งด่วน', status:'กำลังดำเนินการ', dateIn:'2568-04-12', dateDone:'', note:'น้ำไม่ไหล 3 วันแล้ว', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-12 06:00'},{user:'officer2',action:'รับเรื่องเร่งด่วน',time:'2568-04-12 08:00'}] },
+  { id:'CR-2568-008', cat:'ถนน / ทางเท้า', type:'ก่อสร้างใหม่', dept:'ส่วนการโยธา', faction:'ฝ่ายก่อสร้าง', zone:'เขต 4', community:'บ้านทุ่มใหม่', priority:'ปานกลาง', status:'เข้าแผนปีงบประมาณ', dateIn:'2568-04-15', dateDone:'', note:'ขอให้ทำถนนคอนกรีตแทนลูกรัง', audit:[{user:'admin',action:'สร้างคำร้อง',time:'2568-04-15 09:00'},{user:'manager',action:'บรรจุในแผนงบประมาณปี 2569',time:'2568-04-16 14:00'}] },
+];
+
+let currentRole = 'admin';
+let currentPage = 1;
+const PAGE_SIZE = 8;
+let filteredData = [...complaints];
+let charts = {};
+let notifOpen = false;
+
+// ──────────────────────────────────────────────
+// LOGIN
+// ──────────────────────────────────────────────
+let selectedRole = 'admin';
+function selectRole(btn, role) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedRole = role;
+}
+
+function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!user || !pass) { showToast('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน','error'); return; }
+  // mock auth
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('mainLayout').style.display = 'flex';
+  currentRole = selectedRole;
+  const roleNames = { admin:'ผู้ดูแลระบบ', officer:'เจ้าหน้าที่', manager:'ผู้บริหาร' };
+  document.getElementById('userName').textContent = user;
+  document.getElementById('userRole').textContent = roleNames[selectedRole];
+  document.getElementById('userAvatar').textContent = user[0].toUpperCase();
+  document.getElementById('sidebarRole').textContent = roleNames[selectedRole];
+  initApp();
+  showToast(`ยินดีต้อนรับ ${user} 👋`,'success');
+}
+
+function doLogout() {
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('mainLayout').style.display = 'none';
+}
+
+// ──────────────────────────────────────────────
+// NAV
+// ──────────────────────────────────────────────
+function navigate(page, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const titles = { dashboard:'ภาพรวม', complaints:'คำร้องทั้งหมด', add:'เพิ่มคำร้อง', report:'สถิติ & รายงาน' };
+  document.getElementById('topbarTitle').textContent = titles[page] || page;
+  document.getElementById('topbarBreadcrumb').textContent = 'หน้าแรก › ' + (titles[page] || page);
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'complaints') { applyFilter(); }
+  if (page === 'report') renderReport();
+  if (page === 'add') initForm();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+function initApp() {
+  document.getElementById('dashDateSub').textContent = 'ข้อมูล ณ วันที่ ' + new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('fDate').value = today;
+  renderDashboard();
+  renderNotifications();
+  populateCatFilter();
+}
+
+// ──────────────────────────────────────────────
+// DASHBOARD
+// ──────────────────────────────────────────────
+function renderDashboard() {
+  const total = complaints.length;
+  const urgent = complaints.filter(c => c.status === 'รอช่างรับเรื่อง').length;
+  const progress = complaints.filter(c => ['กำลังดำเนินการ','อยู่ระหว่างการติดตาม','เกินกำหนด'].includes(c.status)).length;
+  const done = complaints.filter(c => c.status === 'ประเมินผลเสร็จสิ้น').length;
+  const overdue = complaints.filter(c => c.status === 'เกินกำหนด').length;
+
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiUrgent').textContent = urgent;
+  document.getElementById('kpiProgress').textContent = progress;
+  document.getElementById('kpiDone').textContent = done;
+  document.getElementById('urgentBadge').textContent = urgent + overdue;
+
+  const od = document.getElementById('overdueAlert');
+  if (overdue > 0) { od.style.display = 'flex'; document.getElementById('overdueCount').textContent = overdue; }
+  else od.style.display = 'none';
+
+  renderCharts();
+}
+
+function renderCharts() {
+  // By type
+  const typeCounts = {};
+  complaints.forEach(c => typeCounts[c.cat] = (typeCounts[c.cat]||0)+1);
+  const typeEntries = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  if (charts.type) charts.type.destroy();
+  charts.type = new Chart(document.getElementById('chartType'), {
+    type: 'bar',
+    data: {
+      labels: typeEntries.map(e=>e[0]),
+      datasets: [{ data: typeEntries.map(e=>e[1]), backgroundColor: '#2563a8', borderRadius: 5 }]
+    },
+    options: { plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }
+  });
+
+  // By dept
+  const deptCounts = {};
+  complaints.forEach(c => deptCounts[c.dept] = (deptCounts[c.dept]||0)+1);
+  const deptShort = { 'ส่วนการโยธา':'โยธา', 'ส่วนช่างสุขาภิบาล':'สุขาภิบาล', 'ส่วนควบคุมการก่อสร้างอาคารและผังเมือง':'ควบคุมอาคาร' };
+
+  if (charts.dept) charts.dept.destroy();
+  charts.dept = new Chart(document.getElementById('chartDept'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(deptCounts).map(k=>deptShort[k]||k),
+      datasets: [{ data: Object.values(deptCounts), backgroundColor: ['#1a4f8a','#f59e0b','#16a34a'], borderWidth: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} }
+  });
+}
+
+// ──────────────────────────────────────────────
+// COMPLAINTS TABLE
+// ──────────────────────────────────────────────
+function populateCatFilter() {
+  const cats = [...new Set(complaints.map(c=>c.cat))];
+  const sel = document.getElementById('fCat');
+  sel.innerHTML = '<option value="">ทุกหมวด</option>';
+  cats.forEach(c => { const o = document.createElement('option'); o.textContent = c; sel.appendChild(o); });
+}
+
+function applyFilter() {
+  const dept = document.getElementById('fDept').value;
+  const cat  = document.getElementById('fCat').value;
+  const pri  = document.getElementById('fPriority').value;
+  const stat = document.getElementById('fStatus').value;
+  const zone = document.getElementById('fZone').value;
+  const q    = document.getElementById('globalSearch').value.toLowerCase();
+
+  filteredData = complaints.filter(c =>
+    (!dept || c.dept === dept) &&
+    (!cat  || c.cat  === cat)  &&
+    (!pri  || c.priority === pri) &&
+    (!stat || c.status   === stat) &&
+    (!zone || c.zone     === zone) &&
+    (!q    || c.id.toLowerCase().includes(q) || c.community.toLowerCase().includes(q) || c.cat.toLowerCase().includes(q))
+  );
+
+  currentPage = 1;
+  renderTable();
+}
+
+function handleGlobalSearch(v) {
+  // if on complaints page, apply filter; else switch
+  applyFilter();
+  if (!document.getElementById('page-complaints').classList.contains('active')) {
+    navigate('complaints', document.getElementById('navComplaints'));
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('complaintTableBody');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('filteredCount').textContent = filteredData.length;
+  document.getElementById('totalCount').textContent = complaints.length;
+
+  if (filteredData.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('pageInfo').textContent = 'ไม่พบข้อมูล';
+    document.getElementById('pageBtns').innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  const start = (currentPage-1)*PAGE_SIZE;
+  const pageData = filteredData.slice(start, start+PAGE_SIZE);
+
+  tbody.innerHTML = pageData.map(c => `
+    <tr>
+      <td><strong>${c.id}</strong></td>
+      <td>${c.cat}</td>
+      <td><span class="badge badge-gray">${c.type||'-'}</span></td>
+      <td style="font-size:12px">${c.dept}</td>
+      <td><span style="font-size:12px">${c.zone||''} ${c.community?'/ '+c.community:''}</span></td>
+      <td><span class="badge ${PRIORITY_CLASS[c.priority]||'badge-gray'}">${PRIORITY_ICON[c.priority]||''} ${c.priority}</span></td>
+      <td><span class="status-badge ${STATUS_CLASS[c.status]||''}">${c.status}</span></td>
+      <td>${formatDate(c.dateIn)}</td>
+      <td>${c.dateDone ? formatDate(c.dateDone) : '<span style="color:var(--gray-400)">-</span>'}</td>
+      <td>${calcDays(c.dateIn, c.dateDone)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="openDetail('${c.id}')">รายละเอียด</button>
+        ${currentRole==='admin'?`<button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteComplaint('${c.id}')">ลบ</button>`:''}
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageInfo').textContent = `แสดง ${start+1}–${Math.min(start+PAGE_SIZE, filteredData.length)} จาก ${filteredData.length} รายการ`;
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+  const container = document.getElementById('pageBtns');
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>◀</button>`;
+  for (let i=1; i<=totalPages; i++) {
+    if (totalPages<=7 || i===1 || i===totalPages || Math.abs(i-currentPage)<=1) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    } else if (Math.abs(i-currentPage)===2) {
+      html += `<span style="padding:0 4px;color:var(--gray-400)">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>▶</button>`;
+  container.innerHTML = html;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+}
+
+// ──────────────────────────────────────────────
+// DETAIL MODAL
+// ──────────────────────────────────────────────
+function openDetail(id) {
+  const c = complaints.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item"><label>เลขคำร้อง</label><span>${c.id}</span></div>
+      <div class="detail-item"><label>สถานะ</label><span class="status-badge ${STATUS_CLASS[c.status]||''}">${c.status}</span></div>
+      <div class="detail-item"><label>ส่วนงาน</label><span>${c.dept}</span></div>
+      <div class="detail-item"><label>ฝ่าย</label><span>${c.faction||'-'}</span></div>
+      <div class="detail-item"><label>หมวด</label><span>${c.cat}</span></div>
+      <div class="detail-item"><label>ประเภท</label><span>${c.type||'-'}</span></div>
+      <div class="detail-item"><label>เขต</label><span>${c.zone||'-'}</span></div>
+      <div class="detail-item"><label>ชุมชน</label><span>${c.community||'-'}</span></div>
+      <div class="detail-item"><label>ลำดับความสำคัญ</label><span class="badge ${PRIORITY_CLASS[c.priority]||'badge-gray'}">${PRIORITY_ICON[c.priority]} ${c.priority}</span></div>
+      <div class="detail-item"><label>วันที่รับเรื่อง</label><span>${formatDate(c.dateIn)}</span></div>
+      <div class="detail-item"><label>วันที่เสร็จสิ้น</label><span>${c.dateDone?formatDate(c.dateDone):'-'}</span></div>
+      <div class="detail-item"><label>ระยะเวลา</label><span>${calcDays(c.dateIn, c.dateDone)}</span></div>
+    </div>
+    ${c.note?`<div style="margin-top:16px"><label style="font-size:11.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em">หมายเหตุ</label><p style="margin-top:4px;font-size:13.5px;color:var(--gray-700)">${c.note}</p></div>`:''}
+    ${currentRole!=='manager'?`
+    <div style="margin-top:16px">
+      <label style="font-size:12px;font-weight:700;color:var(--gray-600)">อัปเดตสถานะ</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <select id="statusUpdate" class="filter-select" style="flex:1">
+          ${Object.keys(STATUS_CLASS).map(s=>`<option ${s===c.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn btn-success" onclick="updateStatus('${c.id}')">บันทึก</button>
+      </div>
+    </div>`:''}
+    <div class="audit-log">
+      <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">📋 ประวัติการดำเนินการ</div>
+      ${(c.audit||[]).map(a=>`
+        <div class="audit-entry">
+          <div class="audit-dot"></div>
+          <div>
+            <div class="audit-text">${a.action} — <strong>${a.user}</strong></div>
+            <div class="audit-time">${a.time}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function updateStatus(id) {
+  const c = complaints.find(x=>x.id===id);
+  const newStatus = document.getElementById('statusUpdate').value;
+  if (!c || c.status === newStatus) return;
+  const old = c.status;
+  c.status = newStatus;
+  if (newStatus === 'ประเมินผลเสร็จสิ้น' && !c.dateDone) {
+    c.dateDone = new Date().toISOString().slice(0,10);
+    c.priority = 'เสร็จสิ้น';
+  }
+  c.audit.push({ user: document.getElementById('userName').textContent, action:`เปลี่ยนสถานะ: ${old} → ${newStatus}`, time: new Date().toLocaleString('th-TH') });
+  closeModalById('detailModal');
+  applyFilter();
+  renderDashboard();
+  renderNotifications();
+  showToast(`อัปเดตสถานะ "${id}" สำเร็จ`, 'success');
+}
+
+function deleteComplaint(id) {
+  if (!confirm(`ลบคำร้อง ${id} ?`)) return;
+  complaints = complaints.filter(c=>c.id!==id);
+  filteredData = filteredData.filter(c=>c.id!==id);
+  renderTable();
+  renderDashboard();
+  renderNotifications();
+  showToast(`ลบคำร้อง ${id} แล้ว`, 'warning');
+}
+
+// ──────────────────────────────────────────────
+// FORM
+// ──────────────────────────────────────────────
+function initForm() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('fDate').value = today;
+  // auto ID
+  const nextNum = (complaints.length + 1).toString().padStart(3,'0');
+  const year = new Date().getFullYear() + 543;
+  document.getElementById('fId').placeholder = `CR-${year}-${nextNum} (อัตโนมัติ)`;
+}
+
+function updateFaction() {
+  const dept = document.getElementById('fDeptForm').value;
+  const factions = FACTIONS[dept] || [];
+  const sel = document.getElementById('fFaction');
+  sel.innerHTML = '<option value="">-- เลือกฝ่าย --</option>' + factions.map(f=>`<option>${f}</option>`).join('');
+}
+
+function saveComplaint() {
+  const dept = document.getElementById('fDeptForm').value;
+  const cat  = document.getElementById('fCatForm').value;
+  if (!dept) { showToast('กรุณาเลือกส่วนงาน','error'); return; }
+  if (!cat)  { showToast('กรุณาเลือกหมวด','error'); return; }
+
+  const year = new Date().getFullYear() + 543;
+  const nextNum = (complaints.length + 1).toString().padStart(3,'0');
+  const autoId = `CR-${year}-${nextNum}`;
+  const id = document.getElementById('fId').value.trim() || autoId;
+
+  const newC = {
+    id, cat, dept,
+    type:      document.getElementById('fTypeForm').value,
+    faction:   document.getElementById('fFaction').value,
+    zone:      document.getElementById('fZoneForm').value,
+    community: document.getElementById('fCommunity').value,
+    priority:  document.getElementById('fPriorityForm').value,
+    status:    document.getElementById('fStatusForm').value,
+    dateIn:    document.getElementById('fDate').value,
+    dateDone:  '',
+    note:      document.getElementById('fNote').value,
+    audit:     [{ user: document.getElementById('userName').textContent, action:'สร้างคำร้อง', time: new Date().toLocaleString('th-TH') }]
+  };
+  complaints.unshift(newC);
+  clearForm();
+  populateCatFilter();
+  renderDashboard();
+  renderNotifications();
+  addNotification(`เพิ่มคำร้องใหม่ ${id}`, cat, '🆕');
+  showToast(`บันทึกคำร้อง ${id} สำเร็จ`, 'success');
+  navigate('complaints', document.getElementById('navComplaints'));
+}
+
+function clearForm() {
+  ['fId','fCommunity','fNote'].forEach(id=>document.getElementById(id).value='');
+  ['fDeptForm','fFaction','fCatForm','fTypeForm','fZoneForm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fPriorityForm').value='ปานกลาง';
+  document.getElementById('fStatusForm').value='รอช่างรับเรื่อง';
+  initForm();
+}
+
+// ──────────────────────────────────────────────
+// REPORT
+// ──────────────────────────────────────────────
+function renderReport() {
+  const total = complaints.length;
+  const overdue = complaints.filter(c=>c.status==='เกินกำหนด').length;
+  const done = complaints.filter(c=>c.status==='ประเมินผลเสร็จสิ้น').length;
+  document.getElementById('rTotal').textContent = total;
+  document.getElementById('rOverdue').textContent = overdue;
+  document.getElementById('rDone').textContent = done;
+  document.getElementById('rRate').textContent = total ? Math.round(done/total*100)+'%' : '0%';
+
+  // by status
+  const statusCounts = {};
+  complaints.forEach(c => statusCounts[c.status] = (statusCounts[c.status]||0)+1);
+  if (charts.status) charts.status.destroy();
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(statusCounts),
+      datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#fef9c3','#dbeafe','#fef3c7','#fee2e2','#f5f3ff','#ecfdf5','#dcfce7'], borderWidth:2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}} }
+  });
+
+  // by month (fake)
+  if (charts.month) charts.month.destroy();
+  charts.month = new Chart(document.getElementById('chartMonth'), {
+    type: 'line',
+    data: {
+      labels: ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.'],
+      datasets: [{ label:'คำร้องใหม่', data:[4,7,5,8,3,6], borderColor:'#1a4f8a', backgroundColor:'rgba(26,79,138,.1)', fill:true, tension:.4 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+  });
+}
+
+// ──────────────────────────────────────────────
+// NOTIFICATIONS
+// ──────────────────────────────────────────────
+let notifications = [];
+
+function renderNotifications() {
+  // auto-add overdue
+  notifications = complaints
+    .filter(c=>c.status==='เกินกำหนด')
+    .map(c=>({ id:c.id, title:`เกินกำหนด: ${c.id}`, desc:`${c.cat} — ${c.zone||''} ${c.community||''}`, time:'ระบบตรวจพบ', icon:'🔴', unread:true }));
+
+  complaints
+    .filter(c=>c.status==='รอช่างรับเรื่อง'&&c.priority==='เร่งด่วน')
+    .forEach(c=>notifications.push({ id:c.id, title:`เร่งด่วน: ${c.id}`, desc:`รอช่างรับเรื่อง — ${c.cat}`, time:'ใหม่', icon:'🚨', unread:true }));
+
+  const list = document.getElementById('notifList');
+  if (notifications.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:32px"><div class="empty-icon">🎉</div><p>ไม่มีการแจ้งเตือน</p></div>';
+  } else {
+    list.innerHTML = notifications.map(n=>`
+      <div class="notif-item ${n.unread?'unread':''}" onclick="openDetail('${n.id}');toggleNotif()">
+        <div class="notif-item-icon">${n.icon}</div>
+        <div class="notif-item-body">
+          <div class="notif-item-title">${n.title}</div>
+          <div class="notif-item-desc">${n.desc}</div>
+          <div class="notif-item-time">${n.time}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('notifDot').style.display = notifications.some(n=>n.unread) ? 'block' : 'none';
+}
+
+function addNotification(title, desc, icon='📋') {
+  notifications.unshift({ title, desc, icon, time:'เพิ่งสักครู่', unread:true });
+  document.getElementById('notifDot').style.display = 'block';
+}
+
+function toggleNotif() {
+  notifOpen = !notifOpen;
+  document.getElementById('notifPanel').classList.toggle('open', notifOpen);
+}
+
+// ──────────────────────────────────────────────
+// MODAL
+// ──────────────────────────────────────────────
+function closeModal(e, id) { if (e.target.classList.contains('modal-overlay')) closeModalById(id); }
+function closeModalById(id) { document.getElementById(id).classList.remove('open'); }
+
+// ──────────────────────────────────────────────
+// EXPORT
+// ──────────────────────────────────────────────
+function exportAllCSV() { exportCSV(complaints); }
+function exportFilteredCSV() { exportCSV(filteredData); }
+
+function exportCSV(data) {
+  const headers = ['เลขคำร้อง','หมวด','ประเภทงาน','ส่วนงาน','ฝ่าย','เขต','ชุมชน','ลำดับ','สถานะ','วันรับ','วันเสร็จ','หมายเหตุ'];
+  const rows = data.map(c=>[c.id,c.cat,c.type,c.dept,c.faction,c.zone,c.community,c.priority,c.status,c.dateIn,c.dateDone,c.note].map(v=>`"${(v||'').replace(/"/g,'""')}"`));
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `complaints_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('Export CSV สำเร็จ ✅','success');
+}
+
+// ──────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────
+function formatDate(d) {
+  if (!d) return '-';
+  const [y,m,day] = d.split('-');
+  const months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${parseInt(day)} ${months[parseInt(m)]} ${parseInt(y)+0}`;
+}
+
+function calcDays(start, end) {
+  if (!start) return '-';
+  const s = new Date(start.replace(/(\d{4})/,m=>parseInt(m)-543));
+  const e = end ? new Date(end.replace(/(\d{4})/,m=>parseInt(m)-543)) : new Date();
+  const diff = Math.floor((e-s)/(1000*60*60*24));
+  return `${diff} วัน`;
+}
+
+function showToast(msg, type='') {
+  const icon = {success:'✅',error:'❌',warning:'⚠️'}[type]||'ℹ️';
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `${icon} ${msg}`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// keyboard
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+    if (notifOpen) toggleNotif();
+  }
+});
+</script>
+</body>
+</html>
